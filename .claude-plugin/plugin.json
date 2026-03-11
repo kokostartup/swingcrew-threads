@@ -1,0 +1,9 @@
+{
+  "name": "swingcrew-threads",
+  "version": "0.1.0",
+  "description": "스윙크루 유튜브 원고를 Meta Threads 게시글로 자동 변환 및 게시하는 플러그인",
+  "author": {
+    "name": "David Han"
+  },
+  "keywords": ["threads", "notion", "swingcrew", "social-media", "automation"]
+}
