@@ -17,22 +17,30 @@ def send_message(title, body_markdown):
         raise ValueError("MS_TEAMS_WEBHOOK_URL 환경변수가 설정되지 않았습니다.")
 
     payload = {
-        "type": "AdaptiveCard",
-        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-        "version": "1.4",
-        "body": [
+        "type": "message",
+        "attachments": [
             {
-                "type": "TextBlock",
-                "text": title,
-                "weight": "Bolder",
-                "size": "Large",
-                "wrap": True,
-            },
-            {
-                "type": "TextBlock",
-                "text": body_markdown,
-                "wrap": True,
-            },
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                    "type": "AdaptiveCard",
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                    "version": "1.4",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "text": title,
+                            "weight": "Bolder",
+                            "size": "Large",
+                            "wrap": True,
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": body_markdown,
+                            "wrap": True,
+                        },
+                    ],
+                },
+            }
         ],
     }
 
