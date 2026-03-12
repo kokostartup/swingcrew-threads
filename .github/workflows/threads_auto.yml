@@ -1,0 +1,55 @@
+name: 스윙크루 Threads 자동 게시
+
+on:
+  schedule:
+    # 평일 밤 9시 KST (UTC 12:00, 월~금)
+    - cron: '0 12 * * 1-5'
+    # 평일 밤 11시 KST (UTC 14:00, 월~금)
+    - cron: '0 14 * * 1-5'
+    # 주말 오전 8시 KST (UTC 전날 23:00, 금/토)
+    - cron: '0 23 * * 5,6'
+    # 주말 오후 7시 KST (UTC 10:00, 토/일)
+    - cron: '0 10 * * 0,6'
+
+  workflow_dispatch:
+    inputs:
+      command:
+        description: '실행할 커맨드 (status, generate, publish, news, video)'
+        required: true
+        default: 'publish'
+      args:
+        description: '추가 인자'
+        required: false
+        default: 'all'
+
+jobs:
+  threads-auto:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 의존성 설치
+        run: pip install requests python-dotenv
+
+      - name: Threads 자동 게시
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_MANUSCRIPT_DB_ID: ${{ secrets.NOTION_MANUSCRIPT_DB_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          THREADS_USERNAME: ${{ secrets.THREADS_USERNAME }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            python swingcrew.py ${{ github.event.inputs.command }} ${{ github.event.inputs.args }}
+          else
+            python swingcrew.py publish all
+          fi
