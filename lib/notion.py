@@ -5,6 +5,7 @@ import requests
 
 NOTION_TOKEN = os.getenv("NOTION_TOKEN", "")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID", "")
+NOTION_MANUSCRIPT_DB_ID = os.getenv("NOTION_MANUSCRIPT_DB_ID", "")
 
 BASE_URL = "https://api.notion.com/v1"
 HEADERS = {
@@ -58,6 +59,46 @@ def update_page(page_id, properties):
     """페이지 속성 업데이트."""
     url = f"{BASE_URL}/pages/{page_id}"
     resp = requests.patch(url, headers=HEADERS, json={"properties": properties})
+    resp.raise_for_status()
+    return resp.json()
+
+
+# ── 페이지 생성 ──────────────────────────────────────────
+
+def create_page(database_id, properties, content_text=""):
+    """노션 DB에 새 페이지 생성.
+
+    Args:
+        database_id: 대상 DB ID.
+        properties: 페이지 속성 dict.
+        content_text: 본문 텍스트 (옵션). 줄바꿈으로 문단 분리.
+    """
+    url = f"{BASE_URL}/pages"
+    body = {
+        "parent": {"database_id": database_id},
+        "properties": properties,
+    }
+    if content_text:
+        # 텍스트를 문단 블록으로 변환 (2000자 제한 대응)
+        blocks = []
+        for paragraph in content_text.split("\n\n"):
+            paragraph = paragraph.strip()
+            if not paragraph:
+                continue
+            if paragraph == "---":
+                blocks.append({"object": "block", "type": "divider", "divider": {}})
+            else:
+                # 노션 rich_text는 블록당 최대 2000자
+                chunks = [paragraph[i:i+2000] for i in range(0, len(paragraph), 2000)]
+                rich_text = [{"type": "text", "text": {"content": chunk}} for chunk in chunks]
+                blocks.append({
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": rich_text},
+                })
+        body["children"] = blocks
+
+    resp = requests.post(url, headers=HEADERS, json=body)
     resp.raise_for_status()
     return resp.json()
 
@@ -121,3 +162,18 @@ def set_date(value):
 
 def set_url(value):
     return {"url": value}
+
+
+def set_title(value):
+    return {"title": [{"type": "text", "text": {"content": value}}]}
+
+
+def set_select(value):
+    return {"select": {"name": value}}
+
+
+def set_relation(page_ids):
+    """릴레이션 속성 payload 생성. page_ids: str 또는 list[str]."""
+    if isinstance(page_ids, str):
+        page_ids = [page_ids]
+    return {"relation": [{"id": pid} for pid in page_ids]}

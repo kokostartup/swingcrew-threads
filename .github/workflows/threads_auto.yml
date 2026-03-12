@@ -23,6 +23,9 @@ on:
         options:
           - publish
           - status
+          - generate
+          - news
+          - video
       args:
         description: '추가 인자 (publish: all 또는 특정 제목)'
         required: false
@@ -51,6 +54,8 @@ jobs:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
           THREADS_USERNAME: ${{ secrets.THREADS_USERNAME }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NOTION_MANUSCRIPT_DB_ID: ${{ secrets.NOTION_MANUSCRIPT_DB_ID }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             python swingcrew.py ${{ github.event.inputs.command }} ${{ github.event.inputs.args }}

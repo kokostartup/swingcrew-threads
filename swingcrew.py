@@ -2,9 +2,12 @@
 """스윙크루 Threads 자동 게시 CLI
 
 사용법:
-    python swingcrew.py status                      DB 현황 확인
-    python swingcrew.py publish [all|제목] [--limit N]  승인된 글 Threads 게시
-    python swingcrew.py report                      전일 성과 리포트 → Teams 전송
+    python swingcrew.py status                         DB 현황 확인
+    python swingcrew.py generate [키워드]              원고 → 숏폼/롱폼/체인 생성
+    python swingcrew.py news [키워드]                  골프소식 게시글 생성
+    python swingcrew.py video <URL 또는 제목>          영상코멘트 생성
+    python swingcrew.py publish [all|제목] [--limit N] 승인된 글 Threads 게시
+    python swingcrew.py report                         전일 성과 리포트 → Teams 전송
 """
 
 import sys
@@ -15,6 +18,9 @@ load_dotenv()
 
 REQUIRED_ENV = {
     "status": ["NOTION_TOKEN", "NOTION_DATABASE_ID"],
+    "generate": ["NOTION_TOKEN", "NOTION_DATABASE_ID", "NOTION_MANUSCRIPT_DB_ID", "ANTHROPIC_API_KEY"],
+    "news": ["NOTION_TOKEN", "NOTION_DATABASE_ID", "ANTHROPIC_API_KEY"],
+    "video": ["NOTION_TOKEN", "NOTION_DATABASE_ID", "ANTHROPIC_API_KEY"],
     "publish": ["NOTION_TOKEN", "NOTION_DATABASE_ID", "THREADS_ACCESS_TOKEN", "THREADS_USER_ID", "THREADS_USERNAME"],
     "report": ["THREADS_ACCESS_TOKEN", "THREADS_USER_ID", "MS_TEAMS_WEBHOOK_URL"],
 }
@@ -47,6 +53,21 @@ def main():
     if command == "status":
         from commands.threads_status import run
         run()
+
+    elif command == "generate":
+        from commands.threads_generate import run
+        keyword = " ".join(args) if args else None
+        run(keyword=keyword)
+
+    elif command == "news":
+        from commands.threads_news import run
+        keyword = " ".join(args) if args else None
+        run(keyword=keyword)
+
+    elif command == "video":
+        from commands.threads_video import run
+        url_or_title = " ".join(args) if args else None
+        run(url_or_title=url_or_title)
 
     elif command == "publish":
         from commands.threads_publish import run
