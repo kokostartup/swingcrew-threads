@@ -158,3 +158,84 @@ def get_threads_with_insights(since=None, until=None, limit=25):
         except Exception:
             post["insights"] = {}
     return posts
+
+
+# ── 키워드 검색 (threads_keyword_search 권한 필요) ────
+
+def search_keyword(keyword, limit=25):
+    """키워드로 공개 게시물 검색.
+
+    Args:
+        keyword: 검색어.
+        limit: 조회 건수 (최대 25).
+
+    Returns:
+        list[dict]: 검색 결과 게시물.
+    """
+    url = f"{BASE_URL}/{THREADS_USER_ID}/threads_search"
+    params = {
+        "q": keyword,
+        "fields": "id,text,timestamp,permalink,username,media_type",
+        "limit": limit,
+        "access_token": THREADS_ACCESS_TOKEN,
+    }
+    resp = requests.get(url, params=params)
+    resp.raise_for_status()
+    return resp.json().get("data", [])
+
+
+def search_keyword_with_views(keyword, limit=10):
+    """키워드 검색 + 각 게시물 조회수 합산.
+
+    Returns:
+        tuple: (posts, total_views)
+    """
+    posts = search_keyword(keyword, limit=limit)
+    total_views = 0
+    for post in posts:
+        try:
+            post["insights"] = get_media_insights(post["id"])
+            total_views += post["insights"].get("views", 0)
+        except Exception:
+            post["insights"] = {}
+    return posts, total_views
+
+
+def get_user_profile(user_id):
+    """다른 사용자의 공개 프로필 조회.
+
+    Args:
+        user_id: Threads 사용자 ID.
+
+    Returns:
+        dict: 프로필 정보 {id, username, name, threads_biography, ...}.
+    """
+    url = f"{BASE_URL}/{user_id}"
+    params = {
+        "fields": "id,username,name,threads_profile_picture_url,threads_biography",
+        "access_token": THREADS_ACCESS_TOKEN,
+    }
+    resp = requests.get(url, params=params)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_user_recent_threads(user_id, limit=10):
+    """다른 사용자의 최근 게시물 조회.
+
+    Args:
+        user_id: Threads 사용자 ID.
+        limit: 조회 건수.
+
+    Returns:
+        list[dict]: 게시물 리스트.
+    """
+    url = f"{BASE_URL}/{user_id}/threads"
+    params = {
+        "fields": "id,text,timestamp,permalink,media_type",
+        "limit": limit,
+        "access_token": THREADS_ACCESS_TOKEN,
+    }
+    resp = requests.get(url, params=params)
+    resp.raise_for_status()
+    return resp.json().get("data", [])
