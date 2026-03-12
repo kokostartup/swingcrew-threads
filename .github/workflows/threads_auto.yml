@@ -1,0 +1,59 @@
+name: 스윙크루 Threads 자동 게시
+
+on:
+  schedule:
+    # 매일 오전 7시 KST (UTC 22:00 전날)
+    - cron: '0 22 * * *'
+    # 매일 낮 12시 KST (UTC 03:00)
+    - cron: '0 3 * * *'
+    # 매일 오후 5시 KST (UTC 08:00)
+    - cron: '0 8 * * *'
+    # 매일 밤 8시 KST (UTC 11:00)
+    - cron: '0 11 * * *'
+    # 매일 밤 10시 KST (UTC 13:00)
+    - cron: '0 13 * * *'
+
+  workflow_dispatch:
+    inputs:
+      command:
+        description: '실행할 커맨드'
+        required: true
+        default: 'publish'
+        type: choice
+        options:
+          - publish
+          - status
+      args:
+        description: '추가 인자 (publish: all 또는 특정 제목)'
+        required: false
+        default: 'all'
+
+jobs:
+  threads-auto:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 의존성 설치
+        run: pip install requests python-dotenv
+
+      - name: Threads 자동 게시
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          THREADS_USERNAME: ${{ secrets.THREADS_USERNAME }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            python swingcrew.py ${{ github.event.inputs.command }} ${{ github.event.inputs.args }}
+          else
+            python swingcrew.py publish all --limit 1
+          fi
