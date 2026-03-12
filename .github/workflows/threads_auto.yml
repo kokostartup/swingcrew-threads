@@ -14,11 +14,15 @@ on:
   workflow_dispatch:
     inputs:
       command:
-        description: '실행할 커맨드 (status, generate, publish, news, video)'
+        description: '실행할 커맨드'
         required: true
         default: 'publish'
+        type: choice
+        options:
+          - publish
+          - status
       args:
-        description: '추가 인자'
+        description: '추가 인자 (publish: all 또는 특정 제목)'
         required: false
         default: 'all'
 
@@ -42,11 +46,9 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-          NOTION_MANUSCRIPT_DB_ID: ${{ secrets.NOTION_MANUSCRIPT_DB_ID }}
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
           THREADS_USERNAME: ${{ secrets.THREADS_USERNAME }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             python swingcrew.py ${{ github.event.inputs.command }} ${{ github.event.inputs.args }}
