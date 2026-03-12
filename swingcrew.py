@@ -2,8 +2,8 @@
 """스윙크루 Threads 자동 게시 CLI
 
 사용법:
-    python swingcrew.py status              DB 현황 확인
-    python swingcrew.py publish [all|제목]   승인된 글 Threads 게시
+    python swingcrew.py status                      DB 현황 확인
+    python swingcrew.py publish [all|제목] [--limit N]  승인된 글 Threads 게시
 """
 
 import sys
@@ -48,8 +48,18 @@ def main():
 
     elif command == "publish":
         from commands.threads_publish import run
-        target = " ".join(args) if args else "all"
-        run(target=target)
+        limit = 0
+        filtered_args = []
+        i = 0
+        while i < len(args):
+            if args[i] == "--limit" and i + 1 < len(args):
+                limit = int(args[i + 1])
+                i += 2
+            else:
+                filtered_args.append(args[i])
+                i += 1
+        target = " ".join(filtered_args) if filtered_args else "all"
+        run(target=target, limit=limit)
 
     else:
         print(f"알 수 없는 커맨드: {command}")

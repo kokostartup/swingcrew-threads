@@ -2,14 +2,16 @@ name: 스윙크루 Threads 자동 게시
 
 on:
   schedule:
-    # 평일 밤 9시 KST (UTC 12:00, 월~금)
-    - cron: '0 12 * * 1-5'
-    # 평일 밤 11시 KST (UTC 14:00, 월~금)
-    - cron: '0 14 * * 1-5'
-    # 주말 오전 8시 KST (UTC 전날 23:00, 금/토)
-    - cron: '0 23 * * 5,6'
-    # 주말 오후 7시 KST (UTC 10:00, 토/일)
-    - cron: '0 10 * * 0,6'
+    # 매일 오전 7시 KST (UTC 22:00 전날)
+    - cron: '0 22 * * *'
+    # 매일 낮 12시 KST (UTC 03:00)
+    - cron: '0 3 * * *'
+    # 매일 오후 5시 KST (UTC 08:00)
+    - cron: '0 8 * * *'
+    # 매일 밤 8시 KST (UTC 11:00)
+    - cron: '0 11 * * *'
+    # 매일 밤 10시 KST (UTC 13:00)
+    - cron: '0 13 * * *'
 
   workflow_dispatch:
     inputs:
@@ -53,5 +55,5 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             python swingcrew.py ${{ github.event.inputs.command }} ${{ github.event.inputs.args }}
           else
-            python swingcrew.py publish all
+            python swingcrew.py publish all --limit 1
           fi

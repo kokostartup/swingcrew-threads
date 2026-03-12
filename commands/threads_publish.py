@@ -5,16 +5,22 @@ from datetime import date
 from lib import notion, threads
 
 
-def run(target="all"):
-    """승인된 게시글을 Threads에 게시."""
+def run(target="all", limit=0):
+    """승인된 게시글을 Threads에 게시.
+
+    Args:
+        target: "all" 또는 특정 제목 키워드.
+        limit: 게시할 최대 건수 (0이면 전체).
+    """
     username = os.getenv("THREADS_USERNAME", "")
 
-    # 승인 상태 항목 조회
+    # 승인 상태 항목 조회 (생성일 오름차순 — 오래된 것부터)
     filter_payload = {
         "property": "게시 상태",
         "select": {"equals": "승인"},
     }
-    pages = notion.query_db(filter_payload)
+    sorts = [{"timestamp": "created_time", "direction": "ascending"}]
+    pages = notion.query_db(filter_payload, sorts=sorts)
 
     if not pages:
         print("현재 승인 대기 중인 게시글이 없습니다.")
@@ -26,6 +32,10 @@ def run(target="all"):
         if not pages:
             print(f"'{target}' 제목의 승인된 게시글을 찾을 수 없습니다.")
             return
+
+    # limit이 지정되면 상위 N건만 게시
+    if limit > 0:
+        pages = pages[:limit]
 
     print(f"📤 게시할 항목: {len(pages)}건\n")
 

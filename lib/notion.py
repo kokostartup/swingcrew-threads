@@ -16,13 +16,15 @@ HEADERS = {
 
 # ── DB 쿼리 ──────────────────────────────────────────────
 
-def query_db(filter_payload=None, database_id=None):
+def query_db(filter_payload=None, sorts=None, database_id=None):
     """노션 DB를 쿼리하여 페이지 목록 반환."""
     db_id = database_id or NOTION_DATABASE_ID
     url = f"{BASE_URL}/databases/{db_id}/query"
     body = {}
     if filter_payload:
         body["filter"] = filter_payload
+    if sorts:
+        body["sorts"] = sorts
     resp = requests.post(url, headers=HEADERS, json=body)
     resp.raise_for_status()
     return resp.json().get("results", [])
