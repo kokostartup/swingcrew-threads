@@ -9,28 +9,47 @@ THREADS_USER_ID = os.getenv("THREADS_USER_ID", "")
 
 BASE_URL = "https://graph.threads.net/v1.0"
 
-HEADERS = {
-    "Authorization": f"Bearer {THREADS_ACCESS_TOKEN}",
-    "Content-Type": "application/x-www-form-urlencoded",
-}
+API_TIMEOUT = 30  # 모든 API 호출 타임아웃 (초)
+CONTAINER_WAIT_SEC = 30  # Threads 컨테이너 발행 대기 시간 (API 권장)
+
+
+def _get_headers():
+    """요청 시점의 토큰으로 헤더 생성."""
+    token = os.getenv("THREADS_ACCESS_TOKEN", "") or THREADS_ACCESS_TOKEN
+    return {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+
+
+def _get_token():
+    """요청 시점의 액세스 토큰."""
+    return os.getenv("THREADS_ACCESS_TOKEN", "") or THREADS_ACCESS_TOKEN
+
+
+def _get_user_id():
+    """요청 시점의 사용자 ID."""
+    return os.getenv("THREADS_USER_ID", "") or THREADS_USER_ID
 
 
 # ── 컨테이너 생성 ────────────────────────────────────────
 
 def create_text_container(text, reply_to_id=None):
     """텍스트 미디어 컨테이너 생성 → creation_id 반환."""
-    url = f"{BASE_URL}/{THREADS_USER_ID}/threads"
+    uid = _get_user_id()
+    url = f"{BASE_URL}/{uid}/threads"
     data = {"media_type": "TEXT", "text": text}
     if reply_to_id:
         data["reply_to_id"] = reply_to_id
-    resp = requests.post(url, headers=HEADERS, data=data)
+    resp = requests.post(url, headers=_get_headers(), data=data, timeout=API_TIMEOUT)
     resp.raise_for_status()
     return resp.json().get("id")
 
 
 def create_image_container(text, image_url, reply_to_id=None):
     """이미지 미디어 컨테이너 생성 → creation_id 반환."""
-    url = f"{BASE_URL}/{THREADS_USER_ID}/threads"
+    uid = _get_user_id()
+    url = f"{BASE_URL}/{uid}/threads"
     data = {
         "media_type": "IMAGE",
         "text": text,
@@ -38,7 +57,7 @@ def create_image_container(text, image_url, reply_to_id=None):
     }
     if reply_to_id:
         data["reply_to_id"] = reply_to_id
-    resp = requests.post(url, headers=HEADERS, data=data)
+    resp = requests.post(url, headers=_get_headers(), data=data, timeout=API_TIMEOUT)
     resp.raise_for_status()
     return resp.json().get("id")
 
@@ -47,9 +66,10 @@ def create_image_container(text, image_url, reply_to_id=None):
 
 def publish_container(creation_id):
     """미디어 컨테이너 발행 → post_id 반환."""
-    url = f"{BASE_URL}/{THREADS_USER_ID}/threads_publish"
+    uid = _get_user_id()
+    url = f"{BASE_URL}/{uid}/threads_publish"
     data = {"creation_id": creation_id}
-    resp = requests.post(url, headers=HEADERS, data=data)
+    resp = requests.post(url, headers=_get_headers(), data=data, timeout=API_TIMEOUT)
     resp.raise_for_status()
     return resp.json().get("id")
 
@@ -59,8 +79,8 @@ def publish_container(creation_id):
 def post_text(text, reply_to_id=None):
     """텍스트 컨테이너 생성 → 30초 대기 → 발행 → post_id 반환."""
     creation_id = create_text_container(text, reply_to_id=reply_to_id)
-    print(f"  컨테이너 생성 완료 (id: {creation_id}). 30초 대기...")
-    time.sleep(30)
+    print(f"  컨테이너 생성 완료 (id: {creation_id}). {CONTAINER_WAIT_SEC}초 대기...")
+    time.sleep(CONTAINER_WAIT_SEC)
     post_id = publish_container(creation_id)
     print(f"  게시 완료 (post_id: {post_id})")
     return post_id
@@ -69,8 +89,8 @@ def post_text(text, reply_to_id=None):
 def post_image(text, image_url):
     """이미지 포함 게시 → post_id 반환."""
     creation_id = create_image_container(text, image_url)
-    print(f"  이미지 컨테이너 생성 완료 (id: {creation_id}). 30초 대기...")
-    time.sleep(30)
+    print(f"  이미지 컨테이너 생성 완료 (id: {creation_id}). {CONTAINER_WAIT_SEC}초 대기...")
+    time.sleep(CONTAINER_WAIT_SEC)
     post_id = publish_container(creation_id)
     print(f"  이미지 게시 완료 (post_id: {post_id})")
     return post_id
@@ -103,59 +123,50 @@ def get_thread_url(post_id, username=None):
 # ── 인사이트 / 분석 ─────────────────────────────────────
 
 def get_user_threads(since=None, until=None, limit=25):
-    """사용자 게시물 목록 조회.
-
-    Args:
-        since: ISO 8601 날짜 문자열 (예: "2026-03-11").
-        until: ISO 8601 날짜 문자열 (예: "2026-03-12").
-        limit: 조회 건수 (최대 100).
-
-    Returns:
-        게시물 리스트 [{id, text, timestamp, permalink, ...}, ...]
-    """
-    url = f"{BASE_URL}/{THREADS_USER_ID}/threads"
+    """사용자 게시물 목록 조회."""
+    uid = _get_user_id()
+    url = f"{BASE_URL}/{uid}/threads"
     params = {
         "fields": "id,text,timestamp,permalink,media_type",
         "limit": limit,
-        "access_token": THREADS_ACCESS_TOKEN,
+        "access_token": _get_token(),
     }
     if since:
         params["since"] = since
     if until:
         params["until"] = until
-    resp = requests.get(url, params=params)
+    resp = requests.get(url, params=params, timeout=API_TIMEOUT)
     resp.raise_for_status()
     return resp.json().get("data", [])
 
 
 def get_media_insights(media_id):
-    """개별 게시물 인사이트 조회 → {views, likes, replies, reposts, quotes}.
-
-    Returns:
-        dict: 메트릭 이름 → 값 매핑.
-    """
+    """개별 게시물 인사이트 조회 → {views, likes, replies, reposts, quotes}."""
     url = f"{BASE_URL}/{media_id}/insights"
     params = {
         "metric": "views,likes,replies,reposts,quotes",
-        "access_token": THREADS_ACCESS_TOKEN,
+        "access_token": _get_token(),
     }
-    resp = requests.get(url, params=params)
+    resp = requests.get(url, params=params, timeout=API_TIMEOUT)
     resp.raise_for_status()
     data = resp.json().get("data", [])
-    return {item["name"]: item["values"][0]["value"] for item in data}
+    result = {}
+    for item in data:
+        try:
+            result[item["name"]] = item["values"][0]["value"]
+        except (KeyError, IndexError):
+            result[item.get("name", "unknown")] = 0
+    return result
 
 
 def get_threads_with_insights(since=None, until=None, limit=25):
-    """게시물 목록 + 각 게시물의 인사이트를 합쳐서 반환.
-
-    Returns:
-        list[dict]: 각 항목에 id, text, timestamp, permalink, insights 포함.
-    """
+    """게시물 목록 + 각 게시물의 인사이트를 합쳐서 반환."""
     posts = get_user_threads(since=since, until=until, limit=limit)
     for post in posts:
         try:
             post["insights"] = get_media_insights(post["id"])
-        except Exception:
+        except Exception as e:
+            print(f"  ⚠️ 인사이트 조회 실패 (id={post.get('id')}): {e}")
             post["insights"] = {}
     return posts
 
@@ -163,23 +174,16 @@ def get_threads_with_insights(since=None, until=None, limit=25):
 # ── 키워드 검색 (threads_keyword_search 권한 필요) ────
 
 def search_keyword(keyword, limit=25):
-    """키워드로 공개 게시물 검색.
-
-    Args:
-        keyword: 검색어.
-        limit: 조회 건수 (최대 25).
-
-    Returns:
-        list[dict]: 검색 결과 게시물.
-    """
-    url = f"{BASE_URL}/{THREADS_USER_ID}/threads_search"
+    """키워드로 공개 게시물 검색."""
+    uid = _get_user_id()
+    url = f"{BASE_URL}/{uid}/threads_search"
     params = {
         "q": keyword,
         "fields": "id,text,timestamp,permalink,username,media_type",
         "limit": limit,
-        "access_token": THREADS_ACCESS_TOKEN,
+        "access_token": _get_token(),
     }
-    resp = requests.get(url, params=params)
+    resp = requests.get(url, params=params, timeout=API_TIMEOUT)
     resp.raise_for_status()
     return resp.json().get("data", [])
 
@@ -196,46 +200,24 @@ def search_keyword_with_views(keyword, limit=10):
         try:
             post["insights"] = get_media_insights(post["id"])
             total_views += post["insights"].get("views", 0)
-        except Exception:
+        except Exception as e:
+            print(f"    ⚠️ 인사이트 실패 ({post.get('id')}): {e}")
             post["insights"] = {}
     return posts, total_views
 
 
-def get_user_profile(user_id):
-    """다른 사용자의 공개 프로필 조회.
+def get_user_profile(username):
+    """사용자의 공개 프로필 조회 (username 기반).
 
-    Args:
-        user_id: Threads 사용자 ID.
-
-    Returns:
-        dict: 프로필 정보 {id, username, name, threads_biography, ...}.
+    Note: Threads API는 자기 자신의 프로필만 조회 가능.
+          다른 사용자 프로필은 제한적.
     """
-    url = f"{BASE_URL}/{user_id}"
+    uid = _get_user_id()
+    url = f"{BASE_URL}/{uid}"
     params = {
         "fields": "id,username,name,threads_profile_picture_url,threads_biography",
-        "access_token": THREADS_ACCESS_TOKEN,
+        "access_token": _get_token(),
     }
-    resp = requests.get(url, params=params)
+    resp = requests.get(url, params=params, timeout=API_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
-
-
-def get_user_recent_threads(user_id, limit=10):
-    """다른 사용자의 최근 게시물 조회.
-
-    Args:
-        user_id: Threads 사용자 ID.
-        limit: 조회 건수.
-
-    Returns:
-        list[dict]: 게시물 리스트.
-    """
-    url = f"{BASE_URL}/{user_id}/threads"
-    params = {
-        "fields": "id,text,timestamp,permalink,media_type",
-        "limit": limit,
-        "access_token": THREADS_ACCESS_TOKEN,
-    }
-    resp = requests.get(url, params=params)
-    resp.raise_for_status()
-    return resp.json().get("data", [])

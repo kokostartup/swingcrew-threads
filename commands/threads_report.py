@@ -1,16 +1,7 @@
 """전일 Threads 성과 리포트 + 트렌드 분석을 MS Teams로 발송."""
 
 from datetime import date, timedelta
-from lib import threads, teams
-
-# 골프 관련 트렌드 키워드 풀 (매일 전부 검색 → 조회수 상위 선정)
-GOLF_KEYWORDS = [
-    "골프 스윙", "드라이버 비거리", "골프 레슨", "골프 연습",
-    "퍼팅", "아이언 샷", "골프 초보", "골프 루틴",
-    "골프 피팅", "골프 클럽", "골프 라운드", "싱글 골퍼",
-    "골프 그립", "체중이동", "백스윙", "다운스윙",
-    "골프 유튜브", "골프 브이로그", "골프웨어", "골프장 추천",
-]
+from lib import threads, teams, trends
 
 
 def run():
@@ -22,47 +13,69 @@ def run():
     print(f"📊 {since} 리포트 생성 중...")
 
     # ── 섹션 1: 내 게시물 성과 ──
-    yesterday_posts = threads.get_threads_with_insights(
-        since=since, until=until, limit=100,
-    )
+    yesterday_posts = []
+    try:
+        yesterday_posts = threads.get_threads_with_insights(
+            since=since, until=until, limit=100,
+        )
+        print(f"  내 게시물: {len(yesterday_posts)}건")
+    except Exception as e:
+        print(f"  ⚠️ 내 게시물 조회 실패: {e}")
 
-    # ── 섹션 2: 트렌드 키워드 분석 ──
-    print("🔍 트렌드 키워드 검색 중...")
-    keyword_results = _search_trending_keywords()
+    # ── 섹션 2: 실시간 인기 키워드 수집 (Google Trends) ──
+    print("🔍 Google Trends 인기 키워드 수집 중...")
+    trending_keywords = []
+    try:
+        trending_keywords = trends.get_trending_keywords(limit=10)
+        print(f"  수집된 키워드: {trending_keywords}")
+    except Exception as e:
+        print(f"  ⚠️ 트렌드 키워드 수집 실패: {e}")
 
-    # Top 5 키워드 선정
-    top5_keywords = keyword_results[:5]
+    # ── 섹션 3: 각 키워드를 Threads에서 검색 → 조회수 합산 → 순위 ──
+    keyword_results = []
+    if trending_keywords:
+        print("🔍 Threads 키워드 검색 중...")
+        keyword_results = _search_keywords_on_threads(trending_keywords)
 
-    # Top 5 키워드별 게시물 상세 분석
-    print("📈 Top 5 키워드 게시물 분석 중...")
-    keyword_analysis = _analyze_top_keywords(top5_keywords)
+    # Top 5 키워드 선정 (게시물이 실제로 있는 것만)
+    top5_keywords = [k for k in keyword_results if k["post_count"] > 0][:5]
 
-    # Top 3 게시물 작성자 프로필 분석
-    print("👤 인기 게시물 작성자 프로필 분석 중...")
-    author_analysis = _analyze_top_authors(top5_keywords)
+    # ── 섹션 4: Top 5 키워드 상세 분석 ──
+    keyword_analysis = []
+    if top5_keywords:
+        print("📈 Top 5 키워드 상세 분석 중...")
+        keyword_analysis = _analyze_top_keywords(top5_keywords)
+
+    # ── 섹션 5: Top 3 인기 게시물 작성자 프로필 분석 ──
+    author_analysis = []
+    if top5_keywords:
+        print("👤 인기 작성자 프로필 분석 중...")
+        author_analysis = _analyze_top_authors(top5_keywords)
 
     # 리포트 본문 생성
-    body = _build_report(since, yesterday_posts, keyword_results,
-                         keyword_analysis, author_analysis)
+    body = _build_report(since, yesterday_posts, trending_keywords,
+                         keyword_results, keyword_analysis, author_analysis)
 
     print(body)
     print()
 
     # Teams 전송
     title = f"🏌️ 스윙크루 Threads 일일 리포트 ({since})"
-    teams.send_message(title, body)
-    print("✅ Teams 전송 완료")
+    try:
+        teams.send_message(title, body)
+        print("✅ Teams 전송 완료")
+    except Exception as e:
+        print(f"❌ Teams 전송 실패: {e}")
+        print("  리포트 데이터는 위 로그에서 확인 가능합니다.")
 
 
-def _search_trending_keywords():
-    """모든 골프 키워드를 검색하고 조회수 합계로 정렬.
+# ── 트렌드 분석 함수들 ──────────────────────────────────
 
-    Returns:
-        list[dict]: [{keyword, total_views, post_count, posts}, ...]
-                    조회수 내림차순 정렬.
-    """
+
+def _search_keywords_on_threads(keywords):
+    """각 키워드를 Threads에서 검색, Top 10 게시물 조회수 합산 후 순위 반환."""
     results = []
-    for kw in GOLF_KEYWORDS:
+    for kw in keywords:
         try:
             posts, total_views = threads.search_keyword_with_views(kw, limit=10)
             results.append({
@@ -80,11 +93,7 @@ def _search_trending_keywords():
 
 
 def _analyze_top_keywords(top5):
-    """Top 5 키워드의 게시물 10개씩 분석 → 요약.
-
-    Returns:
-        list[dict]: [{keyword, avg_views, top_post_text, engagement_rate}, ...]
-    """
+    """Top 5 키워드의 게시물 분석 요약."""
     analysis = []
     for kw_data in top5:
         posts = kw_data["posts"]
@@ -99,7 +108,6 @@ def _analyze_top_keywords(top5):
         avg_views = total_views // len(posts) if posts else 0
         total_engagement = sum(likes_list) + sum(replies_list)
 
-        # 조회수 1위 게시물
         best = max(posts, key=lambda p: p.get("insights", {}).get("views", 0))
 
         analysis.append({
@@ -113,69 +121,69 @@ def _analyze_top_keywords(top5):
 
 
 def _analyze_top_authors(top5_keywords):
-    """Top 5 키워드에서 조회수 Top 3 게시물의 작성자 프로필 + 전일 게시글 분석.
+    """Top 5 키워드에서 조회수 Top 3 게시물 작성자의 게시물 분석.
 
-    Returns:
-        list[dict]: [{username, profile, recent_posts}, ...]
+    Note: Threads API 제한으로 다른 사용자의 프로필/게시물 직접 조회가 불가하므로,
+          검색 결과 내에서 해당 작성자의 게시물을 모아서 분석합니다.
     """
-    # 모든 Top 5 키워드의 게시물을 조회수순으로 모으기
+    # 모든 게시물을 수집
     all_posts = []
     for kw_data in top5_keywords:
         all_posts.extend(kw_data.get("posts", []))
 
-    # 조회수 Top 3 게시물 (중복 작성자 제거)
-    all_posts.sort(
-        key=lambda p: p.get("insights", {}).get("views", 0), reverse=True
-    )
-    seen_users = set()
-    top_authors = []
+    # 작성자별 게시물 그룹핑
+    author_posts = {}
     for post in all_posts:
         username = post.get("username", "")
-        user_id = post.get("id", "").split("_")[0] if "_" in post.get("id", "") else ""
-        if not username or username in seen_users:
+        if not username:
             continue
-        seen_users.add(username)
-        top_authors.append(post)
-        if len(top_authors) >= 3:
-            break
+        if username not in author_posts:
+            author_posts[username] = []
+        author_posts[username].append(post)
 
-    # 각 작성자 프로필 + 최근 게시물 조회
-    results = []
-    for post in top_authors:
-        username = post.get("username", "unknown")
-        author_id = post.get("id", "")
-
-        profile = {"username": username}
-        recent_posts = []
-
-        # 프로필 조회 시도 (실패해도 계속)
-        try:
-            profile = threads.get_user_profile(author_id)
-        except Exception:
-            pass
-
-        # 최근 게시물 조회 시도
-        try:
-            recent_posts = threads.get_user_recent_threads(author_id, limit=5)
-        except Exception:
-            pass
-
-        results.append({
+    # 작성자별 총 조회수 계산 → 상위 3명
+    author_stats = []
+    for username, posts in author_posts.items():
+        total_views = sum(
+            p.get("insights", {}).get("views", 0) for p in posts
+        )
+        total_likes = sum(
+            p.get("insights", {}).get("likes", 0) for p in posts
+        )
+        total_replies = sum(
+            p.get("insights", {}).get("replies", 0) for p in posts
+        )
+        # 조회수 최고 게시물
+        best_post = max(
+            posts, key=lambda p: p.get("insights", {}).get("views", 0)
+        )
+        author_stats.append({
             "username": username,
-            "profile": profile,
-            "recent_posts": recent_posts,
-            "top_post": post,
+            "total_views": total_views,
+            "total_likes": total_likes,
+            "total_replies": total_replies,
+            "post_count": len(posts),
+            "best_post": best_post,
+            "posts": sorted(
+                posts,
+                key=lambda p: p.get("insights", {}).get("views", 0),
+                reverse=True,
+            )[:5],
         })
 
-    return results
+    author_stats.sort(key=lambda x: x["total_views"], reverse=True)
+    return author_stats[:3]
 
 
-def _build_report(report_date, yesterday_posts, keyword_results,
-                  keyword_analysis, author_analysis):
+# ── 리포트 빌더 ─────────────────────────────────────────
+
+
+def _build_report(report_date, yesterday_posts, trending_keywords,
+                  keyword_results, keyword_analysis, author_analysis):
     """리포트 마크다운 생성."""
     lines = []
 
-    # ── 섹션 1: 전일 게시물 성과 ──
+    # ── 섹션 1: 전일 내 게시물 성과 ──
     lines.append(f"## 📅 {report_date} 내 게시물 성과")
     lines.append("")
 
@@ -198,6 +206,8 @@ def _build_report(report_date, yesterday_posts, keyword_results,
             total_replies += replies
 
             text_preview = (p.get("text") or "")[:60].replace("\n", " ")
+            if not text_preview:
+                text_preview = "(이미지 게시물)"
             lines.append(f"- **{text_preview}...**")
             lines.append(
                 f"  👁 {views:,}  ❤️ {likes}  💬 {replies}  🔄 {reposts}  📝 {quotes}"
@@ -213,18 +223,22 @@ def _build_report(report_date, yesterday_posts, keyword_results,
     lines.append("---")
     lines.append("")
 
-    # ── 섹션 2: 트렌드 키워드 TOP 10 ──
-    lines.append("## 🔥 트렌드 키워드 TOP 10")
+    # ── 섹션 2: 실시간 트렌드 키워드 (Google Trends → Threads 조회수) ──
+    lines.append("## 🔥 실시간 트렌드 키워드 (Google Trends)")
     lines.append("")
 
-    top10 = keyword_results[:10]
-    if not top10:
-        lines.append("키워드 검색 결과가 없습니다.")
+    if not keyword_results:
+        if trending_keywords:
+            lines.append("키워드는 수집했으나 Threads 검색에 실패했습니다.")
+            lines.append(f"수집 키워드: {', '.join(trending_keywords)}")
+        else:
+            lines.append("트렌드 키워드를 수집하지 못했습니다.")
     else:
-        for i, kw in enumerate(top10, 1):
+        for i, kw in enumerate(keyword_results, 1):
+            views_str = f"{kw['total_views']:,}" if kw["total_views"] > 0 else "데이터 없음"
             lines.append(
                 f"**{i}.** {kw['keyword']} — "
-                f"게시물 {kw['post_count']}건, 총 조회수 {kw['total_views']:,}"
+                f"게시물 {kw['post_count']}건, 총 조회수 {views_str}"
             )
 
     lines.append("")
@@ -242,51 +256,56 @@ def _build_report(report_date, yesterday_posts, keyword_results,
             best = ka.get("best_post", {})
             best_text = (best.get("text") or "")[:50].replace("\n", " ")
             best_views = best.get("insights", {}).get("views", 0)
+            best_user = best.get("username", "")
             best_link = best.get("permalink", "")
 
-            lines.append(f"**🏷 {ka['keyword']}**")
+            lines.append(f"**🏷 {ka['keyword']}** ({ka['post_count']}건)")
             lines.append(
                 f"  평균 조회수: {ka['avg_views']:,} / "
                 f"총 반응(좋아요+댓글): {ka['total_engagement']}"
             )
-            lines.append(
-                f"  🏆 베스트: {best_text}... (👁 {best_views:,})"
-                + (f" [링크]({best_link})" if best_link else "")
-            )
+            if best_text:
+                lines.append(
+                    f"  🏆 베스트: @{best_user} — {best_text}... (👁 {best_views:,})"
+                    + (f" [링크]({best_link})" if best_link else "")
+                )
             lines.append("")
 
     lines.append("---")
     lines.append("")
 
-    # ── 섹션 4: 인기 게시물 작성자 TOP 3 프로필 분석 ──
-    lines.append("## 👤 인기 작성자 TOP 3 프로필")
+    # ── 섹션 4: 인기 작성자 TOP 3 ──
+    lines.append("## 👤 인기 작성자 TOP 3")
     lines.append("")
 
     if not author_analysis:
-        lines.append("작성자 프로필 데이터가 없습니다.")
+        lines.append("작성자 분석 데이터가 없습니다.")
     else:
         for i, author in enumerate(author_analysis, 1):
             username = author["username"]
-            profile = author.get("profile", {})
-            bio = profile.get("threads_biography", "")
-            name = profile.get("name", username)
-            top_post = author.get("top_post", {})
-            top_views = top_post.get("insights", {}).get("views", 0)
+            total_views = author.get("total_views", 0)
+            total_likes = author.get("total_likes", 0)
+            total_replies = author.get("total_replies", 0)
+            post_count = author.get("post_count", 0)
 
-            lines.append(f"**{i}. @{username}** ({name})")
-            if bio:
-                lines.append(f"  소개: {bio[:80]}")
-            lines.append(f"  인기 게시물 조회수: 👁 {top_views:,}")
+            lines.append(f"**{i}. @{username}** (검색 내 게시물 {post_count}건)")
+            lines.append(
+                f"  총 조회수: 👁 {total_views:,} / "
+                f"❤️ {total_likes} / 💬 {total_replies}"
+            )
 
-            # 최근 게시물
-            recent = author.get("recent_posts", [])
-            if recent:
-                lines.append(f"  최근 게시물 {len(recent)}건:")
-                for rp in recent[:3]:
+            # 해당 작성자의 인기 게시물
+            posts = author.get("posts", [])
+            if posts:
+                lines.append("  인기 게시물:")
+                for rp in posts[:3]:
                     rp_text = (rp.get("text") or "")[:40].replace("\n", " ")
+                    if not rp_text:
+                        rp_text = "(이미지)"
+                    rp_views = rp.get("insights", {}).get("views", 0)
                     rp_link = rp.get("permalink", "")
                     lines.append(
-                        f"    • {rp_text}..."
+                        f"    • {rp_text}... (👁 {rp_views:,})"
                         + (f" [링크]({rp_link})" if rp_link else "")
                     )
             lines.append("")
