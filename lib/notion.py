@@ -105,7 +105,7 @@ def get_prop_files(page, prop_name):
 # ── 속성 쓰기 헬퍼 ────────────────────────────────────────
 
 def set_status(value):
-    return {"status": {"name": value}}
+    return {"select": {"name": value}}
 
 
 def set_text(value):

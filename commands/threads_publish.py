@@ -12,7 +12,7 @@ def run(target="all"):
     # 승인 상태 항목 조회
     filter_payload = {
         "property": "게시 상태",
-        "status": {"equals": "승인"},
+        "select": {"equals": "승인"},
     }
     pages = notion.query_db(filter_payload)
 
