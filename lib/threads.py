@@ -98,3 +98,63 @@ def get_thread_url(post_id, username=None):
     """게시물 URL 생성."""
     uname = username or os.getenv("THREADS_USERNAME", "")
     return f"https://www.threads.net/@{uname}/post/{post_id}"
+
+
+# ── 인사이트 / 분석 ─────────────────────────────────────
+
+def get_user_threads(since=None, until=None, limit=25):
+    """사용자 게시물 목록 조회.
+
+    Args:
+        since: ISO 8601 날짜 문자열 (예: "2026-03-11").
+        until: ISO 8601 날짜 문자열 (예: "2026-03-12").
+        limit: 조회 건수 (최대 100).
+
+    Returns:
+        게시물 리스트 [{id, text, timestamp, permalink, ...}, ...]
+    """
+    url = f"{BASE_URL}/{THREADS_USER_ID}/threads"
+    params = {
+        "fields": "id,text,timestamp,permalink,media_type",
+        "limit": limit,
+        "access_token": THREADS_ACCESS_TOKEN,
+    }
+    if since:
+        params["since"] = since
+    if until:
+        params["until"] = until
+    resp = requests.get(url, params=params)
+    resp.raise_for_status()
+    return resp.json().get("data", [])
+
+
+def get_media_insights(media_id):
+    """개별 게시물 인사이트 조회 → {views, likes, replies, reposts, quotes}.
+
+    Returns:
+        dict: 메트릭 이름 → 값 매핑.
+    """
+    url = f"{BASE_URL}/{media_id}/insights"
+    params = {
+        "metric": "views,likes,replies,reposts,quotes",
+        "access_token": THREADS_ACCESS_TOKEN,
+    }
+    resp = requests.get(url, params=params)
+    resp.raise_for_status()
+    data = resp.json().get("data", [])
+    return {item["name"]: item["values"][0]["value"] for item in data}
+
+
+def get_threads_with_insights(since=None, until=None, limit=25):
+    """게시물 목록 + 각 게시물의 인사이트를 합쳐서 반환.
+
+    Returns:
+        list[dict]: 각 항목에 id, text, timestamp, permalink, insights 포함.
+    """
+    posts = get_user_threads(since=since, until=until, limit=limit)
+    for post in posts:
+        try:
+            post["insights"] = get_media_insights(post["id"])
+        except Exception:
+            post["insights"] = {}
+    return posts

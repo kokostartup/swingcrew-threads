@@ -4,6 +4,7 @@
 사용법:
     python swingcrew.py status                      DB 현황 확인
     python swingcrew.py publish [all|제목] [--limit N]  승인된 글 Threads 게시
+    python swingcrew.py report                      전일 성과 리포트 → Teams 전송
 """
 
 import sys
@@ -15,6 +16,7 @@ load_dotenv()
 REQUIRED_ENV = {
     "status": ["NOTION_TOKEN", "NOTION_DATABASE_ID"],
     "publish": ["NOTION_TOKEN", "NOTION_DATABASE_ID", "THREADS_ACCESS_TOKEN", "THREADS_USER_ID", "THREADS_USERNAME"],
+    "report": ["THREADS_ACCESS_TOKEN", "THREADS_USER_ID", "MS_TEAMS_WEBHOOK_URL"],
 }
 
 
@@ -60,6 +62,10 @@ def main():
                 i += 1
         target = " ".join(filtered_args) if filtered_args else "all"
         run(target=target, limit=limit)
+
+    elif command == "report":
+        from commands.threads_report import run
+        run()
 
     else:
         print(f"알 수 없는 커맨드: {command}")
