@@ -27,6 +27,11 @@ on:
         description: '추가 인자 (publish: all 또는 특정 제목)'
         required: false
         default: 'all'
+      limit:
+        description: '게시 건수 (0=전체)'
+        required: false
+        default: '1'
+        type: number
 
 jobs:
   threads-auto:
@@ -53,7 +58,7 @@ jobs:
           THREADS_USERNAME: ${{ secrets.THREADS_USERNAME }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            python swingcrew.py ${{ github.event.inputs.command }} ${{ github.event.inputs.args }}
+            python swingcrew.py ${{ github.event.inputs.command }} ${{ github.event.inputs.args }} --limit ${{ github.event.inputs.limit }}
           else
             python swingcrew.py publish all --limit 1
           fi

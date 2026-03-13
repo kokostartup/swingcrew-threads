@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\Users\\\\User\\\\OneDrive - 룩스코퍼레이션\\\\1. 업무용\\\\2. coding\\\\swingcrew-threads\" && gh run list --workflow=threads_auto.yml --limit 10 2>&1)",
+      "Bash(where gh:*)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"/c/Program Files/GitHub CLI:$PATH\" && gh --version 2>&1)",
+      "Bash(export PATH=\"/c/Program Files/GitHub CLI:$PATH\" && gh auth login --hostname github.com --web 2>&1)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\" && cd \"C:\\\\Users\\\\User\\\\OneDrive - 룩스코퍼레이션\\\\1. 업무용\\\\2. coding\\\\swingcrew-threads\" && gh run list --workflow=\"threads_auto.yml\" --limit 5)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\" && gh auth login --web)",
+      "Bash(cd \"C:\\\\Users\\\\User\\\\OneDrive - 룩스코퍼레이션\\\\1. 업무용\\\\2. coding\\\\swingcrew-threads\" && python swingcrew.py status)",
+      "Bash(pip install:*)",
+      "mcp__claude_ai_Notion__notion-search",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\" && gh auth status 2>&1)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\" && gh run view 23040132696 --log-failed 2>&1)",
+      "Bash(cd \"/c/Users/User/OneDrive - 룩스코퍼레이션/1. 업무용/2. coding/swingcrew-threads\" && gh workflow run threads_auto.yml --ref main)",
+      "Bash(powershell.exe -Command \"gh workflow run threads_auto.yml --ref main\" 2>&1)",
+      "Bash(powershell.exe -Command \"winget install --id GitHub.cli -e --accept-package-agreements --accept-source-agreements\" 2>&1)",
+      "Bash(powershell.exe -Command \"\\(Get-Command gh\\).Source\" 2>&1)",
+      "Read(//c/Program Files/GitHub CLI//**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Read(//c/Users/User/AppData/**)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status 2>&1)",
+      "Bash(cd \"/c/Users/User/OneDrive - 룩스코퍼레이션/1. 업무용/2. coding/swingcrew-threads\" && \"/c/Program Files/GitHub CLI/gh.exe\" workflow run threads_auto.yml --ref main 2>&1)",
+      "Bash(cd \"/c/Users/User/OneDrive - 룩스코퍼레이션/1. 업무용/2. coding/swingcrew-threads\" && \"/c/Program Files/GitHub CLI/gh.exe\" run watch 23040315468 2>&1)",
+      "Bash(cd \"/c/Users/User/OneDrive - 룩스코퍼레이션/1. 업무용/2. coding/swingcrew-threads\" && \"/c/Program Files/GitHub CLI/gh.exe\" run cancel 23040315468 2>&1)",
+      "Bash(cd \"/c/Users/User/OneDrive - 룩스코퍼레이션/1. 업무용/2. coding/swingcrew-threads\" && \"/c/Program Files/GitHub CLI/gh.exe\" run view 23040315468 2>&1)",
+      "Bash(cd \"/c/Users/User/OneDrive - 룩스코퍼레이션/1. 업무용/2. coding/swingcrew-threads\" && \"/c/Program Files/GitHub CLI/gh.exe\" run view --job=66916999680 2>&1)",
+      "Bash(cd \"/c/Users/User/OneDrive - 룩스코퍼레이션/1. 업무용/2. coding/swingcrew-threads\" && gh run list --workflow=threads_report.yml --limit 10 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\User\\\\OneDrive - 룩스코퍼레이션\\\\1. 업무용\\\\2. coding\\\\swingcrew-threads\" && python swingcrew.py report)",
+      "Bash(cd \"C:\\\\Users\\\\User\\\\OneDrive - 룩스코퍼레이션\\\\1. 업무용\\\\2. coding\\\\swingcrew-threads\" && PYTHONIOENCODING=utf-8 python swingcrew.py report)"
+    ]
+  }
+}

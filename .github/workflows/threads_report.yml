@@ -6,6 +6,11 @@ on:
     - cron: '0 1 * * *'
 
   workflow_dispatch:
+    inputs:
+      date:
+        description: '리포트 날짜 (YYYY-MM-DD, 기본: 전일)'
+        required: false
+        default: ''
 
 jobs:
   daily-report:
@@ -29,4 +34,4 @@ jobs:
           THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
           THREADS_USERNAME: ${{ secrets.THREADS_USERNAME }}
           MS_TEAMS_WEBHOOK_URL: ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
-        run: python swingcrew.py report
+        run: python swingcrew.py report ${{ github.event.inputs.date }}

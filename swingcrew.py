@@ -4,7 +4,7 @@
 사용법:
     python swingcrew.py status                      DB 현황 확인
     python swingcrew.py publish [all|제목] [--limit N]  승인된 글 Threads 게시
-    python swingcrew.py report                      전일 성과 리포트 → Teams 전송
+    python swingcrew.py report [YYYY-MM-DD]          성과 리포트 → Teams 전송 (기본: 전일)
 """
 
 import sys
@@ -50,7 +50,7 @@ def main():
 
     elif command == "publish":
         from commands.threads_publish import run
-        limit = 0
+        limit = 1
         filtered_args = []
         i = 0
         while i < len(args):
@@ -65,7 +65,8 @@ def main():
 
     elif command == "report":
         from commands.threads_report import run
-        run()
+        report_date = args[0] if args else None
+        run(report_date=report_date)
 
     else:
         print(f"알 수 없는 커맨드: {command}")
