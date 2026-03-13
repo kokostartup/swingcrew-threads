@@ -26,6 +26,7 @@ on:
           - generate
           - news
           - video
+          - report
       args:
         description: '추가 인자 (publish: all 또는 특정 제목)'
         required: false
@@ -34,18 +35,35 @@ on:
 jobs:
   threads-auto:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: 코드 체크아웃
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Python 설치
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: 의존성 설치
         run: pip install requests python-dotenv
+
+      - name: 환경변수 검증
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          THREADS_USERNAME: ${{ secrets.THREADS_USERNAME }}
+        run: |
+          echo "=== 환경변수 확인 ==="
+          if [ -z "$NOTION_TOKEN" ]; then echo "NOTION_TOKEN 미설정"; exit 1; fi
+          if [ -z "$NOTION_DATABASE_ID" ]; then echo "NOTION_DATABASE_ID 미설정"; exit 1; fi
+          if [ -z "$THREADS_ACCESS_TOKEN" ]; then echo "THREADS_ACCESS_TOKEN 미설정"; exit 1; fi
+          if [ -z "$THREADS_USER_ID" ]; then echo "THREADS_USER_ID 미설정"; exit 1; fi
+          if [ -z "$THREADS_USERNAME" ]; then echo "THREADS_USERNAME 미설정"; exit 1; fi
+          echo "필수 환경변수 확인 완료"
 
       - name: Threads 자동 게시
         env:
@@ -56,9 +74,14 @@ jobs:
           THREADS_USERNAME: ${{ secrets.THREADS_USERNAME }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           NOTION_MANUSCRIPT_DB_ID: ${{ secrets.NOTION_MANUSCRIPT_DB_ID }}
+          MS_TEAMS_WEBHOOK_URL: ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
         run: |
+          echo "=== 실행 시작: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "수동 실행: ${{ github.event.inputs.command }} ${{ github.event.inputs.args }}"
             python swingcrew.py ${{ github.event.inputs.command }} ${{ github.event.inputs.args }}
           else
+            echo "스케줄 실행: publish all --limit 1"
             python swingcrew.py publish all --limit 1
           fi
+          echo "=== 실행 완료: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="

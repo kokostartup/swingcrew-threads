@@ -3,30 +3,35 @@
 import os
 import requests
 
-NOTION_TOKEN = os.getenv("NOTION_TOKEN", "")
-NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID", "")
-NOTION_MANUSCRIPT_DB_ID = os.getenv("NOTION_MANUSCRIPT_DB_ID", "")
-
 BASE_URL = "https://api.notion.com/v1"
-HEADERS = {
-    "Authorization": f"Bearer {NOTION_TOKEN}",
-    "Notion-Version": "2022-06-28",
-    "Content-Type": "application/json",
-}
+
+
+def _get_headers():
+    """요청 시점의 토큰으로 헤더 생성."""
+    token = os.getenv("NOTION_TOKEN", "")
+    return {
+        "Authorization": f"Bearer {token}",
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
+    }
+
+
+def _get_db_id():
+    return os.getenv("NOTION_DATABASE_ID", "")
 
 
 # ── DB 쿼리 ──────────────────────────────────────────────
 
 def query_db(filter_payload=None, sorts=None, database_id=None):
     """노션 DB를 쿼리하여 페이지 목록 반환."""
-    db_id = database_id or NOTION_DATABASE_ID
+    db_id = database_id or _get_db_id()
     url = f"{BASE_URL}/databases/{db_id}/query"
     body = {}
     if filter_payload:
         body["filter"] = filter_payload
     if sorts:
         body["sorts"] = sorts
-    resp = requests.post(url, headers=HEADERS, json=body)
+    resp = requests.post(url, headers=_get_headers(), json=body)
     resp.raise_for_status()
     return resp.json().get("results", [])
 
@@ -36,7 +41,7 @@ def query_db(filter_payload=None, sorts=None, database_id=None):
 def get_page_content(page_id):
     """페이지 본문 블록을 텍스트로 변환."""
     url = f"{BASE_URL}/blocks/{page_id}/children?page_size=100"
-    resp = requests.get(url, headers=HEADERS)
+    resp = requests.get(url, headers=_get_headers())
     resp.raise_for_status()
     blocks = resp.json().get("results", [])
 
@@ -58,7 +63,7 @@ def get_page_content(page_id):
 def update_page(page_id, properties):
     """페이지 속성 업데이트."""
     url = f"{BASE_URL}/pages/{page_id}"
-    resp = requests.patch(url, headers=HEADERS, json={"properties": properties})
+    resp = requests.patch(url, headers=_get_headers(), json={"properties": properties})
     resp.raise_for_status()
     return resp.json()
 
@@ -98,7 +103,7 @@ def create_page(database_id, properties, content_text=""):
                 })
         body["children"] = blocks
 
-    resp = requests.post(url, headers=HEADERS, json=body)
+    resp = requests.post(url, headers=_get_headers(), json=body)
     resp.raise_for_status()
     return resp.json()
 
