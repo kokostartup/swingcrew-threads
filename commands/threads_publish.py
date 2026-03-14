@@ -33,17 +33,17 @@ def run(target="all", limit=0):
             print(f"'{target}' 제목의 승인된 게시글을 찾을 수 없습니다.")
             return
 
-    # limit이 지정되면 상위 N건만 게시
-    if limit > 0:
-        pages = pages[:limit]
-
-    print(f"📤 게시할 항목: {len(pages)}건\n")
+    print(f"📤 승인된 항목: {len(pages)}건\n")
 
     success_count = 0
     fail_count = 0
     skip_count = 0
 
     for page in pages:
+        # limit 도달 시 종료 (성공 건수 기준)
+        if limit > 0 and success_count >= limit:
+            break
+
         page_id = page["id"]
         title = notion.get_prop_text(page, "제목")
         post_type = notion.get_prop_select(page, "게시 타입")
