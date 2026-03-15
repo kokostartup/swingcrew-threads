@@ -1,8 +1,15 @@
 """노션에서 '승인' 상태 게시글을 Threads에 게시."""
 
 import os
-from datetime import date
+from datetime import datetime, timezone, timedelta
 from lib import notion, threads
+
+KST = timezone(timedelta(hours=9))
+
+
+def _now_kst_iso():
+    """현재 KST 시간을 ISO 형식으로 반환."""
+    return datetime.now(KST).strftime("%Y-%m-%dT%H:%M:%S+09:00")
 
 
 def run(target="all", limit=0):
@@ -95,7 +102,7 @@ def _publish_single(page_id, title, content, image_url, username):
     # 노션 업데이트
     notion.update_page(page_id, {
         "게시 상태": notion.set_status("게시완료"),
-        "게시일": notion.set_date(date.today().isoformat()),
+        "게시일": notion.set_date(_now_kst_iso()),
         "Threads URL": notion.set_url(url),
     })
 
@@ -115,7 +122,7 @@ def _publish_chain(page_id, title, content, username):
     # 노션 업데이트
     notion.update_page(page_id, {
         "게시 상태": notion.set_status("게시완료"),
-        "게시일": notion.set_date(date.today().isoformat()),
+        "게시일": notion.set_date(_now_kst_iso()),
         "Threads URL": notion.set_url(first_url),
     })
 

@@ -115,7 +115,7 @@ def set_text(value):
 
 
 def set_date(value):
-    """value: ISO 형식 날짜 문자열 (예: 2026-03-12)"""
+    """value: ISO 형식 날짜/시간 문자열 (예: 2026-03-12T17:30:00+09:00)"""
     return {"date": {"start": value}}
 
 
