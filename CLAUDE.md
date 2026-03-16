@@ -27,7 +27,7 @@ python swingcrew.py report --date 2026-03-13      # 특정 날짜 리포트
 - `swingcrew.py` — CLI 라우터. `status`, `publish`, `report` 3개 서브커맨드. 환경변수 검증 후 `commands/` 모듈로 위임.
 
 ### Commands (`commands/`)
-- `threads_publish.py` — 노션에서 "승인" 상태 글 조회 → Threads API로 게시. 게시 타입별 분기: 숏폼/골프소식/영상코멘트는 단일 게시, 체인은 `---` 구분선으로 파트 분리 후 reply_to_id로 답글 연결, 롱폼(500자 초과)은 수동 게시 안내.
+- `threads_publish.py` — 노션에서 "승인" 상태 글 조회 → Threads API로 게시. 게시 타입별 분기: 숏폼/골프소식/영상코멘트는 단일 게시, 체인은 `---` 구분선으로 파트 분리 후 reply_to_id로 답글 연결, 롱폼(500자 초과)은 자동으로 500자 이하 청크로 분할하여 체인(글타래)으로 게시.
 - `threads_status.py` — DB 현황을 상태별(대기/승인/게시완료/실패)로 요약 출력.
 - `threads_report.py` — 전일 게시물 인사이트 + TOP 10 인기 게시물 리포트를 Teams Adaptive Card로 전송.
 - `commands/*.md` — Claude Code 슬래시 커맨드 정의 파일 (`/threads-publish`, `/threads-generate`, `/threads-news`, `/threads-video`, `/threads-image`, `/threads-check`).

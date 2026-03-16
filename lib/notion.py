@@ -49,7 +49,7 @@ def get_page_content(page_id):
             lines.append("---")
         elif text:
             lines.append(text)
-    return "\n\n".join(lines)
+    return "\n".join(lines)
 
 
 # ── 페이지 업데이트 ──────────────────────────────────────

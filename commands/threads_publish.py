@@ -1,6 +1,7 @@
 """노션에서 '승인' 상태 게시글을 Threads에 게시."""
 
 import os
+import re
 from datetime import datetime, timezone, timedelta
 from lib import notion, threads
 
@@ -70,9 +71,7 @@ def run(target="all", limit=0):
             if post_type == "체인":
                 _publish_chain(page_id, title, content, username)
             elif post_type == "롱폼" and len(content) > 500:
-                _handle_longform(content, title)
-                skip_count += 1
-                continue
+                _publish_longform_as_chain(page_id, title, content, username)
             else:
                 _publish_single(page_id, title, content, image_url, username)
 
@@ -127,16 +126,82 @@ def _publish_chain(page_id, title, content, username):
     })
 
 
-def _handle_longform(content, title):
-    """롱폼 게시글 — 500자 초과로 수동 게시 안내."""
-    print(f"  ⚠️ 롱폼 ({len(content)}자) — Threads API 500자 제한으로 수동 게시 필요")
-    print()
-    print("  ┌─ 게시글 내용 ─────────────────────────")
-    for line in content.split("\n"):
-        print(f"  │ {line}")
-    print("  └────────────────────────────────────────")
-    print()
-    print("  👉 위 내용을 Threads 앱에서 직접 붙여넣기 해주세요.")
+def _split_sentences(text):
+    """문장 경계(. ! ? 뒤 공백 또는 줄바꿈)로 분할."""
+    parts = re.split(r'(?<=[.!?])\s+', text)
+    return [p for p in parts if p.strip()]
+
+
+def _hard_split(text, max_len=500):
+    """단일 문장이 max_len 초과 시 강제 분할."""
+    chunks = []
+    while len(text) > max_len:
+        chunks.append(text[:max_len])
+        text = text[max_len:]
+    if text:
+        chunks.append(text)
+    return chunks
+
+
+def _split_for_chain(content, max_len=500):
+    """본문을 max_len 이하 청크로 분할 (문단 우선, 문장 폴백)."""
+    paragraphs = content.split("\n")
+    chunks = []
+    current = ""
+
+    for para in paragraphs:
+        # 단일 문단이 max_len 초과 → 문장 단위 분할
+        if len(para) > max_len:
+            if current.strip():
+                chunks.append(current.strip())
+                current = ""
+            sentences = _split_sentences(para)
+            for sent in sentences:
+                if len(sent) > max_len:
+                    if current.strip():
+                        chunks.append(current.strip())
+                        current = ""
+                    chunks.extend(_hard_split(sent, max_len))
+                elif len(current) + len(sent) + 1 > max_len:
+                    if current.strip():
+                        chunks.append(current.strip())
+                    current = sent
+                else:
+                    current = f"{current} {sent}".strip() if current else sent
+        elif len(current) + len(para) + 1 > max_len:
+            if current.strip():
+                chunks.append(current.strip())
+            current = para
+        else:
+            current = f"{current}\n{para}" if current else para
+
+    if current.strip():
+        chunks.append(current.strip())
+
+    return chunks
+
+
+def _publish_longform_as_chain(page_id, title, content, username):
+    """롱폼 게시글을 자동으로 체인(글타래)으로 분할 게시."""
+    parts = _split_for_chain(content)
+
+    if len(parts) <= 1:
+        # 분할 결과가 1청크면 단일 게시
+        print("  게시 중...")
+        post_id = threads.post_text(content)
+        url = threads.get_thread_url(post_id, username)
+        print(f"  ✅ 게시 완료: {url}")
+    else:
+        print(f"  롱폼 {len(parts)}파트 체인 게시 중...")
+        post_ids = threads.post_chain(parts)
+        url = threads.get_thread_url(post_ids[0], username)
+        print(f"  ✅ 롱폼 체인 게시 완료: {url}")
+
+    notion.update_page(page_id, {
+        "게시 상태": notion.set_status("게시완료"),
+        "게시일": notion.set_date(_now_kst_iso()),
+        "Threads URL": notion.set_url(url),
+    })
 
 
 def _mark_failed(page_id, error_msg):
