@@ -1,5 +1,6 @@
 """Threads Graph API 헬퍼 모듈"""
 
+import json
 import os
 import time
 import requests
@@ -17,12 +18,14 @@ HEADERS = {
 
 # ── 컨테이너 생성 ────────────────────────────────────────
 
-def create_text_container(text, reply_to_id=None):
+def create_text_container(text, reply_to_id=None, text_attachment=None):
     """텍스트 미디어 컨테이너 생성 → creation_id 반환."""
     url = f"{BASE_URL}/{THREADS_USER_ID}/threads"
     data = {"media_type": "TEXT", "text": text}
     if reply_to_id:
         data["reply_to_id"] = reply_to_id
+    if text_attachment:
+        data["text_attachment"] = json.dumps(text_attachment)
     resp = requests.post(url, headers=HEADERS, data=data)
     resp.raise_for_status()
     return resp.json().get("id")
@@ -59,6 +62,17 @@ def publish_container(creation_id):
 def post_text(text, reply_to_id=None):
     """텍스트 컨테이너 생성 → 30초 대기 → 발행 → post_id 반환."""
     creation_id = create_text_container(text, reply_to_id=reply_to_id)
+    print(f"  컨테이너 생성 완료 (id: {creation_id}). 30초 대기...")
+    time.sleep(30)
+    post_id = publish_container(creation_id)
+    print(f"  게시 완료 (post_id: {post_id})")
+    return post_id
+
+
+def post_text_with_attachment(text, attachment_text):
+    """본문 + 텍스트 첨부 게시 → post_id 반환."""
+    text_attachment = {"plaintext": attachment_text}
+    creation_id = create_text_container(text, text_attachment=text_attachment)
     print(f"  컨테이너 생성 완료 (id: {creation_id}). 30초 대기...")
     time.sleep(30)
     post_id = publish_container(creation_id)

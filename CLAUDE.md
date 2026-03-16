@@ -16,10 +16,10 @@ pip install -r requirements.txt   # requests, python-dotenv
 python swingcrew.py status                        # 노션 DB 현황 확인
 python swingcrew.py publish [all|제목] [--limit N] # 승인된 글 Threads 게시
 python swingcrew.py report                        # 전일 성과 리포트 → MS Teams 전송
-python swingcrew.py report --date 2026-03-13      # 특정 날짜 리포트
+python swingcrew.py report 2026-03-13             # 특정 날짜 리포트
 ```
 
-테스트 프레임워크 없음. `.env` 파일에 환경변수 설정 필요.
+테스트 프레임워크 없음. `.env` 파일에 환경변수 설정 필요. `publish`의 기본 limit=1 (명시하지 않으면 1건만 게시).
 
 ## Architecture
 
@@ -27,14 +27,14 @@ python swingcrew.py report --date 2026-03-13      # 특정 날짜 리포트
 - `swingcrew.py` — CLI 라우터. `status`, `publish`, `report` 3개 서브커맨드. 환경변수 검증 후 `commands/` 모듈로 위임.
 
 ### Commands (`commands/`)
-- `threads_publish.py` — 노션에서 "승인" 상태 글 조회 → Threads API로 게시. 게시 타입별 분기: 숏폼/골프소식/영상코멘트는 단일 게시, 체인은 `---` 구분선으로 파트 분리 후 reply_to_id로 답글 연결, 롱폼(500자 초과)은 자동으로 500자 이하 청크로 분할하여 체인(글타래)으로 게시.
+- `threads_publish.py` — 노션에서 "승인" 상태 글 조회 → Threads API로 게시. 게시 타입별 분기: 숏폼/골프소식/영상코멘트는 단일 게시, 체인은 `---` 구분선으로 파트 분리 후 reply_to_id로 답글 연결, 롱폼(500자 초과)은 텍스트 첨부(text_attachment) 방식으로 게시 — "더 보기" 클릭으로 펼쳐 읽기.
 - `threads_status.py` — DB 현황을 상태별(대기/승인/게시완료/실패)로 요약 출력.
 - `threads_report.py` — 전일 게시물 인사이트 + TOP 10 인기 게시물 리포트를 Teams Adaptive Card로 전송.
 - `commands/*.md` — Claude Code 슬래시 커맨드 정의 파일 (`/threads-publish`, `/threads-generate`, `/threads-news`, `/threads-video`, `/threads-image`, `/threads-check`).
 
 ### Lib (`lib/`)
 - `notion.py` — Notion API 래퍼. DB 쿼리(`query_db`), 페이지 본문 읽기(`get_page_content`), 속성 읽기/쓰기 헬퍼. Notion-Version: 2022-06-28.
-- `threads.py` — Threads Graph API 래퍼. 컨테이너 생성 → 30초 대기 → 발행 패턴. `post_text`, `post_image`, `post_chain` 편의 함수. 인사이트 조회(`get_media_insights`, `get_threads_with_insights`).
+- `threads.py` — Threads Graph API 래퍼. 컨테이너 생성 → 30초 대기 → 발행 패턴. `post_text`, `post_text_with_attachment`, `post_image`, `post_chain` 편의 함수. 인사이트 조회(`get_media_insights`, `get_threads_with_insights`).
 - `teams.py` — MS Teams Incoming Webhook으로 Adaptive Card 전송.
 
 ### Skills (`skills/`)
@@ -43,7 +43,7 @@ python swingcrew.py report --date 2026-03-13      # 특정 날짜 리포트
 
 ### GitHub Actions (`.github/workflows/`)
 - `threads_auto.yml` — 매일 5회(KST 7,12,17,20,22시) 승인된 글 1건씩 자동 게시. `workflow_dispatch`로 수동 실행 가능 (command, args, limit 파라미터).
-- `threads_report.yml` — 매일 오전 10시 KST 일일 리포트 → Teams 전송. `workflow_dispatch`로 특정 날짜(YYYY-MM-DD) 지정 가능.
+- `threads_report.yml` — 매일 오전 10시 KST 전일 리포트 → Teams 전송. `workflow_dispatch`로 특정 날짜(YYYY-MM-DD) 지정 가능.
 
 ## Key Environment Variables
 
@@ -64,6 +64,7 @@ python swingcrew.py report --date 2026-03-13      # 특정 날짜 리포트
 
 - Threads API는 컨테이너 생성 후 **30초 대기** 필수 (`time.sleep(30)`) — API 제약.
 - 체인 게시: 본문을 `---`(divider)로 파트 분리, 각 파트를 순차 게시하며 `reply_to_id`로 연결.
+- 롱폼 게시: `text`에 첫 문단(500자 이내)을 넣고, `text_attachment={"plaintext": 전체본문}`으로 전달. Threads에서 "더 보기" 클릭 시 펼쳐 읽기. 텍스트 전용(이미지 불가), 첨부 최대 10,000자.
 - `lib/notion.py`의 HEADERS는 모듈 로드 시 환경변수로 초기화됨 — `dotenv`가 먼저 로드되어야 함 (`swingcrew.py`에서 처리).
 - `--limit`은 **성공 건수** 기준으로 동작. 롱폼 스킵/빈 본문 등은 카운트하지 않고 다음 글로 넘어감.
 - 게시 순서: 생성일 오름차순 (오래된 것부터).
