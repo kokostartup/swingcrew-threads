@@ -43,7 +43,7 @@ python swingcrew.py report 2026-03-13             # 특정 날짜 리포트
 
 ### GitHub Actions (`.github/workflows/`)
 - `threads_auto.yml` — 매일 5회(KST 7,12,17,20,22시) 승인된 글 1건씩 자동 게시. `workflow_dispatch`로 수동 실행 가능 (command, args, limit 파라미터).
-- `threads_report.yml` — 매일 오전 10시 KST 전일 리포트 → Teams 전송. `workflow_dispatch`로 특정 날짜(YYYY-MM-DD) 지정 가능.
+- `threads_report.yml` — 매일 오전 8시 KST 전일 리포트 → Teams 전송. `workflow_dispatch`로 특정 날짜(YYYY-MM-DD) 지정 가능.
 
 ## Key Environment Variables
 
@@ -58,7 +58,7 @@ python swingcrew.py report 2026-03-13             # 특정 날짜 리포트
 
 ## Notion DB Properties
 
-게시 상태(select): 대기→승인→게시완료/실패. 게시 타입(select): 숏폼/롱폼/체인/골프소식/영상코멘트. 이미지 상태(select): 요청→생성중→완료/실패. 기타: 제목, 게시일, Threads URL, 이미지(files), 메모.
+게시 상태(select): 대기→승인→게시완료/실패. 게시 타입(select): 숏폼/롱폼/체인/골프소식/영상코멘트. 이미지 상태(select): 요청→생성중→완료/실패. 게시 순서(number): 승인 시 사용자가 직접 입력 (작은 숫자부터 먼저 게시). 기타: 제목, 게시일, Threads URL, 이미지(files), 메모.
 
 ## Important Patterns
 
@@ -67,6 +67,6 @@ python swingcrew.py report 2026-03-13             # 특정 날짜 리포트
 - 롱폼 게시: `text`에 첫 문단(500자 이내)을 넣고, `text_attachment={"plaintext": 전체본문}`으로 전달. Threads에서 "더 보기" 클릭 시 펼쳐 읽기. 텍스트 전용(이미지 불가), 첨부 최대 10,000자.
 - `lib/notion.py`의 HEADERS는 모듈 로드 시 환경변수로 초기화됨 — `dotenv`가 먼저 로드되어야 함 (`swingcrew.py`에서 처리).
 - `--limit`은 **성공 건수** 기준으로 동작. 롱폼 스킵/빈 본문 등은 카운트하지 않고 다음 글로 넘어감.
-- 게시 순서: 생성일 오름차순 (오래된 것부터).
+- 게시 순서: "게시 순서" 숫자 속성 오름차순 (작은 번호부터).
 - 날짜/시간은 **KST(UTC+9)** 기준. GitHub Actions 러너는 UTC이므로 `datetime.now(KST)` 사용 (`threads_publish.py`의 `_now_kst_iso()`). `date.today()` 사용 금지 — UTC 기준이라 KST 자정 전후로 날짜가 어긋남.
 - `THREADS_ACCESS_TOKEN`은 60일마다 갱신 필요. Meta 개발자 대시보드 > 앱 설정 > Threads API > 사용자 토큰 생성기에서 발급. GitHub Secrets도 함께 업데이트할 것.
