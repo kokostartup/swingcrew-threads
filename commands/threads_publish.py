@@ -21,12 +21,12 @@ def run(target="all", limit=0):
     """
     username = os.getenv("THREADS_USERNAME", "")
 
-    # 승인 상태 항목 조회 (생성일 오름차순 — 오래된 것부터)
+    # 승인 상태 항목 조회 (승인일 오름차순 — 먼저 승인된 것부터)
     filter_payload = {
         "property": "게시 상태",
         "select": {"equals": "승인"},
     }
-    sorts = [{"timestamp": "created_time", "direction": "ascending"}]
+    sorts = [{"property": "승인일", "direction": "ascending"}]
     pages = notion.query_db(filter_payload, sorts=sorts)
 
     if not pages:
