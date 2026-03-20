@@ -2,8 +2,8 @@ name: the10bin Threads 자동 게시
 
 on:
   schedule:
-    # 매일 저녁 8시 KST (UTC 11:00)
-    - cron: '0 11 * * *'
+    # 매일 저녁 9시 KST (UTC 12:00)
+    - cron: '0 12 * * *'
 
   workflow_dispatch:
     inputs:
