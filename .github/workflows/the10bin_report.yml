@@ -1,0 +1,37 @@
+name: the10bin Threads 일일 리포트
+
+on:
+  schedule:
+    # 매일 오전 8시 KST (UTC 23:00, 전날)
+    - cron: '0 23 * * *'
+
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '리포트 날짜 (YYYY-MM-DD, 기본: 전일)'
+        required: false
+        default: ''
+
+jobs:
+  daily-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v5
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 의존성 설치
+        run: pip install requests python-dotenv
+
+      - name: 일일 리포트 생성 및 Teams 전송
+        env:
+          THREADS_ACCESS_TOKEN: ${{ secrets.THE10BIN_THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THE10BIN_THREADS_USER_ID }}
+          THREADS_USERNAME: ${{ secrets.THE10BIN_THREADS_USERNAME }}
+          MS_TEAMS_WEBHOOK_URL: ${{ secrets.THE10BIN_MS_TEAMS_WEBHOOK_URL }}
+        run: python swingcrew.py report ${{ github.event.inputs.date }}

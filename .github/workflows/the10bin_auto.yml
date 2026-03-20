@@ -1,0 +1,56 @@
+name: the10bin Threads 자동 게시
+
+on:
+  schedule:
+    # 매일 저녁 8시 KST (UTC 11:00)
+    - cron: '0 11 * * *'
+
+  workflow_dispatch:
+    inputs:
+      command:
+        description: '실행할 커맨드'
+        required: true
+        default: 'publish'
+        type: choice
+        options:
+          - publish
+          - status
+      args:
+        description: '추가 인자 (publish: all 또는 특정 제목)'
+        required: false
+        default: 'all'
+      limit:
+        description: '게시 건수 (0=전체)'
+        required: false
+        default: '1'
+        type: number
+
+jobs:
+  threads-auto:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v5
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 의존성 설치
+        run: pip install requests python-dotenv
+
+      - name: Threads 자동 게시
+        env:
+          NOTION_TOKEN: ${{ secrets.THE10BIN_NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.THE10BIN_NOTION_DATABASE_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THE10BIN_THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THE10BIN_THREADS_USER_ID }}
+          THREADS_USERNAME: ${{ secrets.THE10BIN_THREADS_USERNAME }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            python swingcrew.py ${{ github.event.inputs.command }} ${{ github.event.inputs.args }} --limit ${{ github.event.inputs.limit }}
+          else
+            python swingcrew.py publish all --limit 1
+          fi
