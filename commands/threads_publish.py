@@ -1,6 +1,7 @@
 """노션에서 '승인' 상태 게시글을 Threads에 게시."""
 
 import os
+import re
 from datetime import datetime, timezone, timedelta
 from lib import notion, threads
 
@@ -68,7 +69,7 @@ def run(target="all", limit=0):
                 continue
 
             if post_type == "체인":
-                _publish_chain(page_id, title, content, username)
+                _publish_chain(page_id, title, content, image_url, username)
             elif post_type == "롱폼" and len(content) > 500:
                 _publish_longform(page_id, title, content, username)
             else:
@@ -105,14 +106,21 @@ def _publish_single(page_id, title, content, image_url, username):
     })
 
 
-def _publish_chain(page_id, title, content, username):
+def _clean_part(text):
+    """파트 내 잔여 구분선 제거."""
+    lines = text.split('\n')
+    cleaned = [line for line in lines if line.strip() != '---']
+    return '\n'.join(cleaned).strip()
+
+
+def _publish_chain(page_id, title, content, image_url, username):
     """체인(글타래) 게시 — 답글 연결 방식."""
-    parts = [p.strip() for p in content.split("---") if p.strip()]
+    parts = [_clean_part(p) for p in re.split(r'\n-{3,}\n|\n-{3,}$|^-{3,}\n', content) if p.strip()]
     if not parts:
         raise ValueError("체인 파트를 분리할 수 없습니다.")
 
     print(f"  체인 {len(parts)}파트 게시 중...")
-    post_ids = threads.post_chain(parts)
+    post_ids = threads.post_chain(parts, image_url=image_url)
 
     first_url = threads.get_thread_url(post_ids[0], username)
     print(f"  ✅ 체인 게시 완료: {first_url}")
