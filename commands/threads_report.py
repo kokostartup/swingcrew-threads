@@ -1,7 +1,7 @@
 """전일 Threads 성과 리포트를 MS Teams로 발송."""
 
 import sys
-from datetime import date, datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from lib import threads, teams
 
 
@@ -30,7 +30,8 @@ def _run_report(report_date=None):
     if report_date:
         target = datetime.strptime(report_date, "%Y-%m-%d").date()
     else:
-        target = date.today() - timedelta(days=1)
+        KST = timezone(timedelta(hours=9))
+        target = datetime.now(KST).date() - timedelta(days=1)
 
     since = target.isoformat()
     until = (target + timedelta(days=1)).isoformat()

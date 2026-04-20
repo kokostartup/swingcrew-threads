@@ -106,16 +106,22 @@ def _publish_single(page_id, title, content, image_url, username):
     })
 
 
+def _is_divider(line):
+    """구분선 여부 판별 — '---', '---파트구분---', '--- 1 ---' 등 모두 인식."""
+    s = line.strip()
+    return bool(s) and bool(re.match(r'^-{3,}.*-{3,}$', s) or re.match(r'^-{3,}$', s))
+
+
 def _clean_part(text):
     """파트 내 잔여 구분선 제거."""
     lines = text.split('\n')
-    cleaned = [line for line in lines if line.strip() != '---']
+    cleaned = [line for line in lines if not _is_divider(line)]
     return '\n'.join(cleaned).strip()
 
 
 def _publish_chain(page_id, title, content, image_url, username):
     """체인(글타래) 게시 — 답글 연결 방식."""
-    parts = [_clean_part(p) for p in re.split(r'\n-{3,}\n|\n-{3,}$|^-{3,}\n', content) if p.strip()]
+    parts = [_clean_part(p) for p in re.split(r'\n *-{3,}[^\n]*\n|\n *-{3,}[^\n]*$|^ *-{3,}[^\n]*\n', content) if p.strip()]
     if not parts:
         raise ValueError("체인 파트를 분리할 수 없습니다.")
 

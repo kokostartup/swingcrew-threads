@@ -29,7 +29,14 @@
       "Bash(cd \"/c/Users/User/OneDrive - 룩스코퍼레이션/1. 업무용/2. coding/swingcrew-threads\" && \"/c/Program Files/GitHub CLI/gh.exe\" run view --job=66916999680 2>&1)",
       "Bash(cd \"/c/Users/User/OneDrive - 룩스코퍼레이션/1. 업무용/2. coding/swingcrew-threads\" && gh run list --workflow=threads_report.yml --limit 10 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\User\\\\OneDrive - 룩스코퍼레이션\\\\1. 업무용\\\\2. coding\\\\swingcrew-threads\" && python swingcrew.py report)",
-      "Bash(cd \"C:\\\\Users\\\\User\\\\OneDrive - 룩스코퍼레이션\\\\1. 업무용\\\\2. coding\\\\swingcrew-threads\" && PYTHONIOENCODING=utf-8 python swingcrew.py report)"
+      "Bash(cd \"C:\\\\Users\\\\User\\\\OneDrive - 룩스코퍼레이션\\\\1. 업무용\\\\2. coding\\\\swingcrew-threads\" && PYTHONIOENCODING=utf-8 python swingcrew.py report)",
+      "Bash(curl:*)",
+      "Bash(claude --version)",
+      "Bash(gh auth:*)",
+      "Bash(gh run:*)",
+      "Bash(gh api:*)",
+      "Bash(gh secret:*)",
+      "Bash(gh workflow:*)"
     ]
   }
 }

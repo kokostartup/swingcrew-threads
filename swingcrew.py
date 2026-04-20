@@ -2,16 +2,44 @@
 """스윙크루 Threads 자동 게시 CLI
 
 사용법:
-    python swingcrew.py status                      DB 현황 확인
-    python swingcrew.py publish [all|제목] [--limit N]  승인된 글 Threads 게시
-    python swingcrew.py report [YYYY-MM-DD]          성과 리포트 → Teams 전송 (기본: 전일)
+    python swingcrew.py status                                DB 현황 확인
+    python swingcrew.py publish [all|제목] [--limit N]        승인된 글 Threads 게시
+    python swingcrew.py report [YYYY-MM-DD]                   성과 리포트 → Teams 전송 (기본: 전일)
+    python swingcrew.py --channel the10bin publish [all|제목]  다른 채널로 실행
 """
 
 import sys
 import os
 
 from dotenv import load_dotenv
-load_dotenv()
+
+
+def _extract_channel(argv):
+    """sys.argv에서 --channel 값을 추출하고 제거."""
+    channel = None
+    cleaned = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--channel" and i + 1 < len(argv):
+            channel = argv[i + 1]
+            i += 2
+        else:
+            cleaned.append(argv[i])
+            i += 1
+    return channel, cleaned
+
+
+channel, sys.argv = _extract_channel(sys.argv)
+
+if channel:
+    env_file = os.path.join(os.path.dirname(__file__) or ".", f".env.{channel}")
+    if not os.path.exists(env_file):
+        print(f"환경 파일을 찾을 수 없습니다: {env_file}")
+        sys.exit(1)
+    load_dotenv(env_file, override=True)
+    print(f"[채널: {channel}]")
+else:
+    load_dotenv()
 
 REQUIRED_ENV = {
     "status": ["NOTION_TOKEN", "NOTION_DATABASE_ID"],

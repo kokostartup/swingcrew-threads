@@ -90,13 +90,16 @@ def post_image(text, image_url):
     return post_id
 
 
-def post_chain(parts):
+def post_chain(parts, image_url=None):
     """체인(글타래) 게시. parts: 텍스트 리스트. → post_id 리스트 반환."""
     post_ids = []
 
-    # 첫 파트 게시
+    # 첫 파트 게시 (이미지가 있으면 이미지 포함)
     print(f"  [1/{len(parts)}] 첫 파트 게시 중...")
-    first_id = post_text(parts[0])
+    if image_url:
+        first_id = post_image(parts[0], image_url)
+    else:
+        first_id = post_text(parts[0])
     post_ids.append(first_id)
 
     # 이후 파트: reply_to_id로 연결
